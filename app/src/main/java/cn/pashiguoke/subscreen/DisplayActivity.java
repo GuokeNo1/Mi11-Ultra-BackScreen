@@ -1,10 +1,11 @@
-package com.psgk.doubescreen;
+package cn.pashiguoke.subscreen;
 
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
 import android.app.ActivityOptions;
+import android.app.KeyguardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
@@ -12,10 +13,14 @@ import android.content.pm.PackageManager;
 import android.hardware.display.DisplayManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.view.Display;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.BaseAdapter;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -23,7 +28,7 @@ import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DisplayActivity extends AppCompatActivity {
+public class DisplayActivity extends SubBaseActivity {
     Display[] displays;
 
     @Override
@@ -31,6 +36,25 @@ public class DisplayActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_display);
 
+        KeyguardManager km = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+            if(km.isDeviceLocked()){
+                findViewById(R.id.appListView).setVisibility(View.GONE);
+                findViewById(R.id.infoText).setVisibility(View.VISIBLE);
+            }else{
+                findViewById(R.id.infoText).setVisibility(View.GONE);
+                findViewById(R.id.appListView).setVisibility(View.VISIBLE);
+            }
+        }
+
+        Button backBtn = findViewById(R.id.backButton);
+        backBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                DisplayActivity.this.finish();
+            }
+        });
 
         ListView appList = findViewById(R.id.appListView);
 

@@ -1,13 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="com.psgk.doubescreen" >
+    package="cn.pashiguoke.subscreen">
 
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.SYSTEM_OVERLAY_WINDOW" />
     <uses-permission
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.wake_lock" />
+    <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.CAMERA"/>
 
     <application
         android:allowBackup="true"
@@ -15,15 +20,43 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.DoubeScreen" >
+        android:theme="@style/Theme.DoubeScreen">
+        <activity android:name=".SubBaseActivity"
+            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"
+            android:excludeFromRecents="true"
+            android:showWhenLocked="true"/>
+        <activity
+            android:name=".MirrorActivity"
+            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"
+            android:excludeFromRecents="true"
+            android:exported="true" />
+        <activity
+            android:name=".SubActivity"
+            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"
+            android:excludeFromRecents="true"
+            android:exported="true" />
         <activity
             android:name=".DisplayActivity"
             android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"
+            android:excludeFromRecents="true"
+            android:exported="true" />
+
+        <receiver android:name=".receiver.MYBroadcastReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.SCREEN_ON" />
+            </intent-filter>
+        </receiver>
+
+        <service
+            android:name=".service.SubScreenKeeper"
+            android:enabled="true"
             android:exported="true" />
         <activity
             android:name=".MainActivity"
+            android:excludeFromRecents="true"
             android:exported="true"
-            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar" >
+            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -31,5 +64,5 @@
             </intent-filter>
         </activity>
     </application>
-    <uses-permission android:name="android.permission.INTERNET"/>
+
 </manifest>
