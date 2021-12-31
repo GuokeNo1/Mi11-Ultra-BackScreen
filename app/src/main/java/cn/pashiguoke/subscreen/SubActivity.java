@@ -20,5 +20,6 @@ public class SubActivity extends SubBaseActivity {
 
         ViewPager2 vp = findViewById(R.id.VP);
         vp.setAdapter(new ViewAdapter(this));
+
     }
 }

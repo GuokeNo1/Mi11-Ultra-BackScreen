@@ -35,7 +35,6 @@ import java.net.URL;
 import cn.pashiguoke.subscreen.service.SubScreenKeeper;
 
 public class MainActivity extends AppCompatActivity {
-    Display display;
     View personal_bg;
     @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
@@ -44,23 +43,52 @@ public class MainActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_main);
 
-        //改透明状态栏的
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            //透明状态栏
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
-            //透明导航栏
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION);
+        //透明状态栏
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+        //透明导航栏
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION);
+        personal_bg = findViewById(R.id.mainBack);
+
+        initBackground();
+        RequestPermissions();
+
+        // 显示器管理的
+        DisplayManager displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
+        Display[] displays = displayManager.getDisplays();
+        ((TextView)findViewById(R.id.infText)).setText("随意点击即可开启副屏内容");
+        if(displays.length<2){
+            ((TextView)findViewById(R.id.infText)).setText("未检测到副屏");
         }
 
+        // 启动服务
+        startService(new Intent(this,SubScreenKeeper.class));
+
+    }
+    // 申请权限
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    private void RequestPermissions(){
+        String[] permissions = new String[]{
+                Manifest.permission.CAMERA,
+                Manifest.permission.INTERNET
+        };
+        for (String permission:permissions) {
+            while (checkSelfPermission(permission) == PackageManager.PERMISSION_DENIED){
+                Log.d("TAG", "RequestPermissions: "+permission);
+                requestPermissions(new String[]{permission},0);
+            }
+
+        }
+    }
+    // 初始化设置背景
+    private void initBackground(){
 
         // 换背景的
-        personal_bg = findViewById(R.id.mainBack);
         if(new File(getCacheDir()+"/background").exists()){
             personal_bg.setBackground(Drawable.createFromPath(getCacheDir()+"/background"));
         }else{
             personal_bg.setBackgroundResource(R.drawable.background);
         }
-
+        new DownloadImageTask().execute("https://picsum.photos/720/1280");
         if(!new File(getCacheDir()+"/time.html").exists()){
             try {
                 FileWriter fw = new FileWriter(getCacheDir()+"/time.html");
@@ -123,30 +151,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        new DownloadImageTask().execute("https://picsum.photos/720/1280");
-
-        // 显示器管理的
-        DisplayManager displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
-        Display[] displays = displayManager.getDisplays();
-        ((TextView)findViewById(R.id.infText)).setText("随意点击即可开启副屏内容");
-        if(displays.length<2){
-            ((TextView)findViewById(R.id.infText)).setText("未检测到副屏");
-        }
-        else {
-            display = displays[1];
-            personal_bg.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    //startActivity(new Intent(MainActivity.this,SubActivity.class));
-                }
-            });
-        }
-
-        startService(new Intent(this,SubScreenKeeper.class));
-
     }
-
-
     private Drawable loadImageFromNetwork(String imageUrl) {
         Drawable drawable = null;
         try {
@@ -162,13 +167,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return drawable;
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        finish();
-
     }
 
     private class DownloadImageTask extends AsyncTask<String, Void, Drawable> {

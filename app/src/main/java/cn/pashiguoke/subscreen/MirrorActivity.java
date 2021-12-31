@@ -3,6 +3,7 @@ package cn.pashiguoke.subscreen;
 import static android.hardware.camera2.CameraCaptureSession.*;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 
 import android.annotation.SuppressLint;
 import android.graphics.Camera;
@@ -17,6 +18,7 @@ import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.Size;
@@ -25,87 +27,112 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.Transformation;
 import android.widget.LinearLayout;
 
 import java.util.Arrays;
 
-public class MirrorActivity extends SubBaseActivity {
+public class MirrorActivity extends SubBaseActivity{
+
+    private CameraDevice device;
+    private int width,height;
+    private Size cameraSize;
+    private String cameraId;
+    private CameraManager cm;
+    private TextureView mirrorView;
+    private Surface surface;
 
     @SuppressLint("MissingPermission")
+    @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_mirror);
-        findViewById(R.id.mirror).setOnTouchListener(new View.OnTouchListener() {
+
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED|WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+
+        // 左滑返回
+        mirrorView = findViewById(R.id.mirror);
+        mirrorView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
                 return myGLister.onTouchEvent(motionEvent);
             }
         });
-        int width = getResources().getDisplayMetrics().widthPixels;
-        int height = getResources().getDisplayMetrics().heightPixels;
 
-        CameraManager cm = (CameraManager)getSystemService(CAMERA_SERVICE);
+        // 获取屏幕宽高
+        width = getResources().getDisplayMetrics().widthPixels;
+        height = getResources().getDisplayMetrics().heightPixels;
+
+
+        cm = (CameraManager)getSystemService(CAMERA_SERVICE);
         try {
             String[] cmids = cm.getCameraIdList();
 
             for(String id : cmids){
+                cameraId = id;
                 CameraCharacteristics cameraCharacteristics = cm.getCameraCharacteristics(id);
                 Integer facing = cameraCharacteristics.get(CameraCharacteristics.LENS_FACING);
+                // 获取后置摄像头
                 if(facing!=null && facing==CameraCharacteristics.LENS_FACING_BACK){
                     StreamConfigurationMap streamConfigurationMap = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
                     Size[] sizes = streamConfigurationMap.getOutputSizes(ImageFormat.JPEG);
-                    float vP = (float) width/(float) height;
-                    float sP = 0;
-                    Size ss = null;
+                    // 计算最佳宽高比
+                    float screen_proportion = (float) width/(float) height;
+                    float select_view_proportion = 0;
+                    Size select_size = null;
                     for(int i=0;i<sizes.length;i++){
                         Size s = sizes[i];
-                        float itP = (float)s.getWidth()/(float) s.getHeight();
-                        float diffP = Math.abs(vP-itP);
+                        float itP = (float)s.getHeight()/(float) s.getWidth();
+                        float diffP = Math.abs(screen_proportion-itP);
                         if(i==0){
-                            sP = diffP;
-                            ss = s;
+                            select_view_proportion = diffP;
+                            select_size = s;
                         }
-                        if(diffP<sP){
-                            sP = diffP;
-                            ss = s;
+                        if(diffP<select_view_proportion){
+                            select_view_proportion = diffP;
+                            select_size = s;
 
-                        }else if(diffP==sP){
-                            if(ss.getWidth()-width>s.getWidth()-width){
-                                sP = diffP;
-                                ss = s;
+                        }else if(diffP==select_view_proportion){
+                            if(select_size.getHeight()-width>s.getHeight()-width){
+                                select_view_proportion = diffP;
+                                select_size = s;
                             }
                         }
                     }
-                    final Size size = ss;
-                    cm.openCamera(id, new CameraDevice.StateCallback() {
+                    cameraSize = select_size;
+                    // 重置MirrorView的宽高
+                    ViewGroup.LayoutParams layoutParams = mirrorView.getLayoutParams();
+
+                    float scaleN = (float) width / (float)select_size.getHeight();
+                    Size FinalSize = new Size((int) (select_size.getHeight() * scaleN),(int) (select_size.getWidth() * scaleN));
+                    layoutParams.width = FinalSize.getWidth();
+                    layoutParams.height = FinalSize.getHeight();
+                    mirrorView.setLayoutParams(layoutParams);
+
+
+                    // 反转MirrorView
+                    Animation animation = new ZF(FinalSize.getWidth(),FinalSize.getHeight());
+                    animation.setFillAfter(true);
+                    mirrorView.startAnimation(animation);
+
+                    // 设定Texture
+                    SurfaceTexture texture = new SurfaceTexture(false);
+                    assert texture!=null;
+                    texture.setDefaultBufferSize(cameraSize.getWidth(),cameraSize.getHeight());
+                    surface = new Surface(texture);
+                    mirrorView.setSurfaceTexture(texture);
+
+                    cm.openCamera(cameraId, new CameraDevice.StateCallback() {
                         @Override
                         public void onOpened(@NonNull CameraDevice cameraDevice) {
                             try {
-                                TextureView sv = findViewById(R.id.mirror);
-
-                                ViewGroup.LayoutParams layoutParams = sv.getLayoutParams();
-                                float scaleN = (float) width / (float)size.getWidth();
-                                layoutParams.width = (int) (size.getWidth() * scaleN);
-                                layoutParams.height = (int) (size.getHeight() * scaleN);
-                                sv.setLayoutParams(layoutParams);
-
-                                Animation animation = new ZF((int) (size.getWidth() * scaleN),(int) (size.getHeight() * scaleN));
-                                animation.setFillAfter(true);
-                                sv.startAnimation(animation);
-
-
+                                device = cameraDevice;
                                 CaptureRequest.Builder builder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
                                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                                    SurfaceTexture texture = new SurfaceTexture(false);
-                                    assert texture!=null;
-                                    texture.setDefaultBufferSize(size.getWidth(),size.getHeight());
-
-
-                                    sv.setSurfaceTexture(texture);
-                                    Surface surface = new Surface(texture);
 
 
                                     builder.addTarget(surface);
@@ -148,6 +175,8 @@ public class MirrorActivity extends SubBaseActivity {
                             cameraDevice.close();
                         }
                     },null);
+                    break;
+
                 }
             }
 
@@ -155,6 +184,16 @@ public class MirrorActivity extends SubBaseActivity {
             e.printStackTrace();
         }
     }
+
+    @Override
+    public void finish() {
+        super.finish();
+        if(device!=null)
+            device.close();
+
+    }
+
+    // 反转显示用的
     class ZF extends Animation{
         private Camera mCamera = new Camera();
         private float cx,cy;
