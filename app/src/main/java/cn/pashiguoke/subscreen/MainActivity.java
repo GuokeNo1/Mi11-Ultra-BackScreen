@@ -55,7 +55,7 @@ public class MainActivity extends AppCompatActivity {
         // 显示器管理的
         DisplayManager displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
         Display[] displays = displayManager.getDisplays();
-        ((TextView)findViewById(R.id.infText)).setText("随意点击即可开启副屏内容");
+        ((TextView)findViewById(R.id.infText)).setText("不出意外副屏已经开起来了");
         if(displays.length<2){
             ((TextView)findViewById(R.id.infText)).setText("未检测到副屏");
         }

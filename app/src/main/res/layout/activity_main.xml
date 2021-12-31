@@ -45,6 +45,14 @@
             android:textStyle="bold"
             android:layout_marginTop="10dp"
             android:textSize="20dp"/>
+
+        <TextView
+            android:id="@+id/textView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAlignment="center"
+            android:background="@color/white"
+            android:text="记得开启锁屏显示权限哦" />
     </LinearLayout>
     <LinearLayout
         android:layout_width="wrap_content"
@@ -55,6 +63,7 @@
             android:id="@+id/infText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:background="@color/white"
             android:text="未检测到第二块屏幕"/>
     </LinearLayout>
 </FrameLayout>
